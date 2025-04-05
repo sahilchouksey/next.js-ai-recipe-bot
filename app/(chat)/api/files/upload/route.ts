@@ -6,7 +6,7 @@ import { auth } from "@/app/(auth)/auth";
 
 const FileSchema = z.object({
   file: z
-    .instanceof(File)
+    .custom<Blob>((file) => file instanceof Blob)
     .refine((file) => file.size <= 5 * 1024 * 1024, {
       message: "File size should be less than 5MB",
     })
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as Blob & { name: string };
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
