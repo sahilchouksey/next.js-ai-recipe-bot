@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
 import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
-import { searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 import { hasBasicYouTubeAuth } from "@/lib/youtube-config";
+import { searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 
 // Cache for storing search results to avoid repeating searches
 const searchCache: Record<string, {
