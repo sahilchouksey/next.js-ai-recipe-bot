@@ -4,7 +4,6 @@ import { z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
 import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
-import { hasBasicYouTubeAuth } from "@/lib/youtube-config";
 import { searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 
 // Cache for storing search results to avoid repeating searches
@@ -37,7 +36,7 @@ async function enhanceSearchQuery(recipeName: string): Promise<string> {
   }
 }
 
-// Search YouTube with direct API implementation
+// Search YouTube with Invidious implementation
 async function searchYouTubeWithDetails(query: string, cuisine?: string): Promise<{ 
   id: string, 
   title: string, 
@@ -55,16 +54,11 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
       return searchCache[cacheKey].results;
     }
 
-    // Use only the direct API method
-    let searchResults = [];
-    if (hasBasicYouTubeAuth()) {
-      searchResults = await searchYoutubeDirectAPI(query);
-    } else {
-      console.error("YouTube authentication not configured");
-    }
+    // Use Invidious search implementation
+    const searchResults = await searchYoutubeDirectAPI(query);
     
     if (!searchResults || searchResults.length === 0) {
-      console.error("No search results found from direct API");
+      console.error("No search results found from Invidious");
       return getReliableFallbackVideo(cuisine, query);
     }
     
@@ -134,7 +128,7 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
       thumbnailUrl: bestMatch.thumbnail?.thumbnails?.[0]?.url || 
                   `https://i.ytimg.com/vi/${bestMatch.id}/hqdefault.jpg`,
       duration: bestMatch.length?.text || "Unknown",
-      views: 0
+      views: bestMatch.viewCount || 0
     };
     
     // Cache the results
