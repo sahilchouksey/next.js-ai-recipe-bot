@@ -1,6 +1,6 @@
 import { Clock, ChefHat, Users, Utensils, Image as ImageIcon, AlertCircle } from "lucide-react";
 import NextImage from "next/image";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Known working YouTube IDs for fallback
@@ -62,10 +62,23 @@ function ImageWithFallback({ src, alt, ...props }: {
   alt: string;
   [key: string]: any;
 }) {
-    console.info(src, alt)
   const [imgSrc, setImgSrc] = useState<string>(src);
   const [error, setError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
+  // Pre-calculate a placeholder size to prevent layout shifts
+  const [placeholderSize, setPlaceholderSize] = useState({
+    width: props.width || '100%',
+    height: props.height || '100%',
+  });
+  
+  useEffect(() => {
+    if (props.fill) {
+      // For fill mode, use 100% dimensions
+      setPlaceholderSize({ width: '100%', height: '100%' });
+    }
+  }, [props.fill]);
   
   useEffect(() => {
     setImgSrc(src);
@@ -75,11 +88,22 @@ function ImageWithFallback({ src, alt, ...props }: {
     // Preload the image to check if it's valid
     const img = new Image();
     img.src = src;
-    img.onload = () => setLoading(false);
+    
+    // Handle image load/error events without causing scroll jumps
+    img.onload = () => {
+      // Use RAF to avoid layout shifts during render
+      requestAnimationFrame(() => {
+        setLoading(false);
+      });
+    };
+    
     img.onerror = () => {
-      setError(true);
-      setLoading(false);
-      setImgSrc(`https://via.placeholder.com/100?text=${encodeURIComponent(alt.substring(0, 10))}`);
+      // Use RAF to avoid layout shifts during render
+      requestAnimationFrame(() => {
+        setError(true);
+        setLoading(false);
+        setImgSrc(`https://via.placeholder.com/100?text=${encodeURIComponent(alt.substring(0, 10))}`);
+      });
     };
     
     return () => {
@@ -98,20 +122,28 @@ function ImageWithFallback({ src, alt, ...props }: {
   
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full w-full bg-muted">
-        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-      </div>
+     null
     );
   }
   
   return (
     <NextImage
+      ref={imageRef}
       src={imgSrc}
       alt={alt}
       {...props}
       onError={() => {
         setError(true);
         setImgSrc(`https://via.placeholder.com/100?text=${encodeURIComponent(alt.substring(0, 10))}`);
+      }}
+      // Set a priority flag for the main dishes to help loading priority
+      priority={props.priority || false}
+      // Reserve image dimensions to prevent layout shifts
+      placeholder="empty"
+      style={{
+        objectFit: 'cover',
+        // Ensure image size is stable to prevent layout shifts
+        ...placeholderSize
       }}
     />
   );
@@ -131,62 +163,6 @@ function YouTubeVideo({ videoId, title, channelName, duration, views }: {
   const [loadError, setLoadError] = useState<boolean>(false);
   const [iframeLoading, setIframeLoading] = useState<boolean>(true);
   
-  // useEffect(() => {
-  //   setIsLoading(true);
-  //   setLoadError(false);
-    
-  //   // First, validate the videoId format
-  //   if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId) || videoId === "dQw4w9WgXcQ") {
-  //     // Invalid format or known bad ID
-  //     const randomIndex = Math.floor(Math.random() * VALID_YOUTUBE_IDS.length);
-  //     setFallbackId(VALID_YOUTUBE_IDS[randomIndex]);
-  //     setIsValid(false);
-  //     setIsLoading(false);
-  //     return;
-  //   }
-    
-  //   // Create a timeout to avoid hanging if validation takes too long
-  //   const timeoutId = setTimeout(() => {
-  //     if (isLoading) {
-  //       console.log("YouTube validation timed out, using fallback");
-  //       const randomIndex = Math.floor(Math.random() * VALID_YOUTUBE_IDS.length);
-  //       setFallbackId(VALID_YOUTUBE_IDS[randomIndex]);
-  //       setIsValid(false);
-  //       setIsLoading(false);
-  //     }
-  //   }, 5000); // 5 second timeout
-    
-  //   // Try to validate with our API
-  //   fetch(`/api/validate-youtube?videoId=${videoId}`)
-  //     .then(res => {
-  //       if (!res.ok) throw new Error("Validation API error");
-  //       return res.json();
-  //     })
-  //     .then(data => {
-  //       if (!data.valid) {
-  //         setFallbackId(data.fallbackId || VALID_YOUTUBE_IDS[0]);
-  //         setIsValid(false);
-  //       }
-  //       setIsLoading(false);
-  //     })
-  //     .catch(() => {
-  //       // On error, use a known good video ID
-  //       const randomIndex = Math.floor(Math.random() * VALID_YOUTUBE_IDS.length);
-  //       setFallbackId(VALID_YOUTUBE_IDS[randomIndex]);
-  //       setIsValid(false);
-  //       setIsLoading(false);
-  //       setLoadError(true);
-  //     })
-  //     .finally(() => {
-  //       clearTimeout(timeoutId);
-  //     });
-      
-  //   return () => {
-  //     clearTimeout(timeoutId);
-  //   };
-  // }, [videoId]);
-
-  // Reset loading state when video ID changes
   useEffect(() => {
     setIframeLoading(true);
     
@@ -215,7 +191,7 @@ function YouTubeVideo({ videoId, title, channelName, duration, views }: {
   
   if (isLoading) {
     return (
-      <div className="w-full aspect-video bg-muted animate-pulse flex items-center justify-center">
+      <div className="w-full aspect-video bg-muted flex items-center justify-center">
         <div className="text-sm text-muted-foreground">Loading video...</div>
       </div>
     );
@@ -227,16 +203,20 @@ function YouTubeVideo({ videoId, title, channelName, duration, views }: {
   
   return (
     <div className="w-full overflow-hidden rounded-md mb-2">
-      <div className="relative w-full aspect-video">
+      <div 
+        className="relative w-full aspect-video"
+        // Set a specific height to prevent layout shifts
+        style={{ height: 'calc(width * 0.5625)' }} // 16:9 aspect ratio
+      >
         {iframeLoading && (
-          <div className="absolute inset-0 z-10 bg-muted animate-pulse flex items-center justify-center">
+          <div className="absolute inset-0 z-10 bg-muted flex items-center justify-center">
             <div className="text-sm text-muted-foreground">Loading video...</div>
           </div>
         )}
         <iframe
           width="100%"
           height="100%"
-          src={`https://www.youtube.com/embed/${embedId}`}
+          src={`https://www.youtube.com/embed/${embedId}?mute=1`}
           title={displayTitle}
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -330,26 +310,32 @@ function MainDishImage({ recipe }: { recipe: any }) {
   };
   
   return (
-    <div className="w-full relative aspect-video rounded-md overflow-hidden mb-4">
+    // Use a fixed aspect ratio container to prevent layout shifts
+    <div className="w-full relative mb-4" style={{ aspectRatio: '16/9', minHeight: '240px' }}>
+      <Avatar className="w-full h-full rounded-md">
+        <AvatarImage
+          src={imageUrl}
+          alt={`${recipe.name} - ${recipe.cuisine || 'Food'} dish`}
+          className="object-cover w-full h-full"
+          onError={() => {
+            if (!hasError) {
+              fetchDishImage();
+            }
+          }}
+        />
+        <AvatarFallback className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-200">
+          <ImageIcon className="h-10 w-10 text-gray-400 mb-2" />
+          <p className="text-base font-medium text-gray-700">{recipe.name}</p>
+          <p className="text-xs italic text-gray-500 mt-1">Image not available</p>
+        </AvatarFallback>
+      </Avatar>
+      
       {isLoading && (
-        <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
-          <ImageIcon className="h-10 w-10 text-muted-foreground opacity-50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 flex flex-col items-center justify-center z-10">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+          <p className="text-sm font-medium text-gray-600">Preparing your culinary visual...</p>
         </div>
       )}
-      <ImageWithFallback
-        src={imageUrl}
-        alt={`${recipe.name} - ${recipe.cuisine || 'Food'} dish`}
-        fill
-        className="object-cover"
-        sizes="(max-width: 768px) 100vw, 600px"
-        onError={() => {
-          // If image fails to load, try dish-image API as fallback
-          if (!hasError) {
-            fetchDishImage();
-          }
-        }}
-        priority={true}
-      />
     </div>
   );
 }
@@ -360,7 +346,7 @@ export function RecipeDetail({ recipe = SAMPLE }) {
   const tags = recipe?.tags || [];
   const video = recipe?.video;
   
-  console.log(recipe, recipe.video)
+  console.log(recipe)
   return (
     <div className="rounded-lg bg-muted p-4 flex flex-col gap-4">
       <div>
@@ -369,7 +355,7 @@ export function RecipeDetail({ recipe = SAMPLE }) {
       </div>
       
       {/* Main dish image - UPDATED SECTION */}
-      <MainDishImage recipe={recipe} />
+      {/* <MainDishImage recipe={recipe} /> */}
       
       {/* Video section */}
       {video && (

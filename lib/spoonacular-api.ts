@@ -79,21 +79,17 @@ export async function getRecipeImageFromSpoonacular(dish: string): Promise<strin
       return recipeImageCache[dish.toLowerCase()];
     }
     
-    // Use AbortController to set a timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
     try {
       // Create fully-formed URL
       const apiUrl = `https://api.spoonacular.com/recipes/complexSearch?query=${encodeURIComponent(dish)}&apiKey=${SPOONACULAR_RECIPE_KEY}&number=10`;
       
       const response = await fetch(apiUrl, {
-        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store'
+        cache: 'no-store',
+        method: 'GET'
+      }).catch(error => {
+        throw new Error(`Network error: ${error.message}`);
       });
-      
-      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error(`Spoonacular API error: ${response.status}`);
@@ -114,7 +110,6 @@ export async function getRecipeImageFromSpoonacular(dish: string): Promise<strin
     } catch (fetchError) {
       // Handle fetch-specific errors
       console.error(`Fetch error for Spoonacular recipe (${dish}):`, fetchError);
-      clearTimeout(timeoutId);
       return null;
     }
     

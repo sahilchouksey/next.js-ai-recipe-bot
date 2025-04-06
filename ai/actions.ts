@@ -3,15 +3,7 @@ import { string, z } from "zod";
 
 import { gemini20FlashThinkingModel, geminiFlashModel, geminiProModel } from ".";
 import { createApiUrl } from "@/lib/api-utils";
-import { INGREDIENT_IMAGES, CATEGORY_FALLBACKS, GENERIC_FOOD_FALLBACK } from "@/lib/ingredient-database";
-import { recipe } from "@/db/schema";
-import { and, placeholder } from "drizzle-orm";
-import { steps } from "framer-motion";
-import image from "next/image";
-import { error } from "console";
-import { resolve } from "dns";
-import { Images } from "lucide-react";
-import { getIngredientImageFromSpoonacular } from "@/lib/spoonacular-api";
+
 
 // Valid YouTube video IDs for cooking content as backup
 const VALID_YOUTUBE_IDS = [
