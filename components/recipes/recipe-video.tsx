@@ -1,5 +1,6 @@
-import { Play } from "lucide-react";
+import { Play, AlertCircle } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 
 const SAMPLE = {
   title: "How to Make Classic Spaghetti Carbonara",
@@ -10,6 +11,10 @@ const SAMPLE = {
 };
 
 export function RecipeVideo({ videoInfo = SAMPLE }) {
+  // Track any errors loading the thumbnail
+  const [thumbnailError, setThumbnailError] = useState(false);
+  const fallbackThumbnail = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=450&fit=crop";
+  
   return (
     <div className="rounded-lg bg-muted p-4">
       <h3 className="font-medium mb-2">Recipe Video</h3>
@@ -22,11 +27,12 @@ export function RecipeVideo({ videoInfo = SAMPLE }) {
         >
           <div className="relative aspect-video overflow-hidden rounded-md">
             <Image 
-              src={videoInfo.thumbnailUrl} 
+              src={thumbnailError ? fallbackThumbnail : videoInfo.thumbnailUrl} 
               alt={videoInfo.title}
               fill
               className="object-cover transition-transform group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 600px"
+              onError={() => setThumbnailError(true)}
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="bg-black/75 rounded-full p-3 group-hover:bg-primary transition-colors">
@@ -42,6 +48,9 @@ export function RecipeVideo({ videoInfo = SAMPLE }) {
             <p className="text-sm text-muted-foreground">{videoInfo.channelName}</p>
           </div>
         </a>
+        <div className="text-xs text-muted-foreground">
+          <p>Click to watch on YouTube</p>
+        </div>
       </div>
     </div>
   );

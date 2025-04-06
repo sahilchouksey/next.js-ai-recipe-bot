@@ -33,17 +33,23 @@ export async function GET(request: Request) {
       });
     }
     
-    // Use ytdl-core to validate the video
-    const videoInfo = await getVideoInfo(videoId);
-    
-    if (videoInfo && videoInfo.videoDetails) {
-      return NextResponse.json({ valid: true });
-    } else {
-      // If validation fails, return a random known valid ID
-      const fallbackId = KNOWN_VALID_VIDEOS[Math.floor(Math.random() * KNOWN_VALID_VIDEOS.length)];
-      return NextResponse.json({ valid: false, fallbackId });
+    // Try to validate with ytdl-core using our updated function with cookie support
+    try {
+      const videoInfo = await getVideoInfo(videoId);
+      
+      if (videoInfo && videoInfo.videoDetails) {
+        return NextResponse.json({ valid: true });
+      }
+    } catch (ytdlError) {
+      console.error("ytdl-core validation failed:", ytdlError);
+      // Continue to fallback
     }
+    
+    // If validation fails or errors, return a random known valid ID
+    const fallbackId = KNOWN_VALID_VIDEOS[Math.floor(Math.random() * KNOWN_VALID_VIDEOS.length)];
+    return NextResponse.json({ valid: false, fallbackId });
   } catch (error) {
+    console.error("YouTube validation error:", error);
     return NextResponse.json({ 
       valid: false,
       fallbackId: KNOWN_VALID_VIDEOS[0]

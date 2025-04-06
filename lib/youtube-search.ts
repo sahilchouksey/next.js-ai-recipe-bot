@@ -10,6 +10,9 @@ const videoInfoCache: Record<string, {
 // Cache expiration time (1 hour)
 const CACHE_DURATION = 60 * 60 * 1000;
 
+// Get YouTube cookie from environment variable
+const YOUTUBE_COOKIE = process.env.YOUTUBE_COOKIE || '';
+
 /**
  * Search for YouTube videos using youtube-search-api
  */
@@ -31,7 +34,7 @@ export async function searchYoutube(query: string): Promise<Array<any>> {
 }
 
 /**
- * Get detailed info about a YouTube video using ytdl-core
+ * Get detailed info about a YouTube video using ytdl-core with cookie support
  */
 export async function getVideoInfo(videoId: string): Promise<any> {
   // Check cache first
@@ -41,7 +44,27 @@ export async function getVideoInfo(videoId: string): Promise<any> {
   }
   
   try {
-    const info = await ytdl.getBasicInfo(videoId);
+    // Set up request options with cookie for authentication
+    const requestOptions: ytdl.getInfoOptions = {
+      requestOptions: {
+        headers: {
+          // Add the cookie for authentication
+          'Cookie': YOUTUBE_COOKIE
+        }
+      }
+    };
+
+    // Set a timeout to prevent hanging requests
+    const timeout = 8000; // 8 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), timeout);
+    });
+    
+    // Create the ytdl info request with our options
+    const infoPromise = ytdl.getBasicInfo(videoId, requestOptions);
+    
+    // Race between the actual request and the timeout
+    const info = await Promise.race([infoPromise, timeoutPromise]) as ytdl.videoInfo;
     
     // Cache the result
     videoInfoCache[videoId] = {
@@ -52,6 +75,7 @@ export async function getVideoInfo(videoId: string): Promise<any> {
     return info;
   } catch (error) {
     console.error(`Error getting video info for ${videoId}:`, error);
+    // Return null to signal that a fallback should be used
     return null;
   }
 }

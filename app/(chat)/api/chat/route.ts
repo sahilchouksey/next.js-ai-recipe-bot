@@ -47,6 +47,9 @@ export async function POST(request: Request) {
         - IMPORTANT: When using the getRecipeDetails tool, DO NOT repeat the full recipe in your text response. 
           The tool will display the recipe card automatically, so your text response should be brief and conversational.
           Simply acknowledge the request and ask if they need anything else or have questions about the recipe.
+        - IMPORTANT: When using the searchRecipes tool, DO NOT list the recipes again in your text response.
+          The tool will display the recipe list component automatically. Your text response should be brief like
+          "Here are some recipes that match your request. Click on any recipe to see more details."
         - The optimal flow is:
           - User asks about a dish/recipe
           - You search for recipes matching the query

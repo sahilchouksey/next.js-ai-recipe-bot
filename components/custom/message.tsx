@@ -25,7 +25,6 @@ export const Message = ({
   attachments?: Array<Attachment>;
 }) => {
   // Flag to check if the message content should be hidden
-  // (when we're displaying a recipe card and the message is just repeating the recipe)
   const [hideContent, setHideContent] = useState(false);
 
   // Check if we're displaying a recipe and the text is redundant
@@ -36,16 +35,33 @@ export const Message = ({
         (tool) => tool.toolName === "getRecipeDetails" && tool.state === "result"
       );
 
+      // Check if any tool invocation is a recipe search
+      const hasRecipeSearch = toolInvocations.some(
+        (tool) => tool.toolName === "searchRecipes" && tool.state === "result"
+      );
+
       if (hasRecipeDetail) {
         // Look for common patterns that indicate text is just repeating recipe details
         const lowerContent = content.toLowerCase();
         const isRecipeRepeat =
           (lowerContent.includes("ingredients:") && lowerContent.includes("instructions:")) ||
           (lowerContent.includes("here's the recipe") && lowerContent.includes("ingredients")) ||
-          // @ts-ignore
-          ( lowerContent?.match(/\d+\s*(tbsp|tsp|cup|g|oz|lb|kg)/g)?.length > 3); // Multiple measurement units
+          ((lowerContent?.match(/\d+\s*(tbsp|tsp|cup|g|oz|lb|kg)/g)?.length ?? 0) > 3); // Multiple measurement units
 
         setHideContent(isRecipeRepeat);
+      } else if (hasRecipeSearch) {
+        // Check if content is repeating the recipe search results
+        const lowerContent = content.toLowerCase();
+
+        // Detect patterns where the AI is listing recipes again after showing the recipe list component
+        const isRecipeListRepeat =
+          (lowerContent.includes("found these") && lowerContent.includes("recipe")) ||
+          (lowerContent.includes("here are") && lowerContent.includes("recipe")) ||
+          ((lowerContent?.match(/\b(recipe|found|here|are)\b/g)?.length ?? 0) >= 2 &&
+            lowerContent.includes("which") &&
+            lowerContent.includes("like to see"));
+
+        setHideContent(isRecipeListRepeat);
       }
     }
   }, [toolInvocations, content]);
@@ -67,9 +83,16 @@ export const Message = ({
         )}
 
         {/* Display brief intro message when hiding duplicate content */}
-        {hideContent && (
+        {hideContent && toolInvocations?.some((t) => t.toolName === "getRecipeDetails") && (
           <div className="text-zinc-800 dark:text-zinc-300 text-sm italic">
             Here&apos;s the recipe you requested:
+          </div>
+        )}
+
+        {/* Display brief intro message when hiding duplicate recipe search results */}
+        {hideContent && toolInvocations?.some((t) => t.toolName === "searchRecipes") && (
+          <div className="text-zinc-800 dark:text-zinc-300 text-sm italic">
+            Here are some recipes that match your search. Click on any recipe to see more details.
           </div>
         )}
 

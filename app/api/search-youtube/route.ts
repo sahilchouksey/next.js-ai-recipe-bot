@@ -4,6 +4,7 @@ import { object, z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
 import { searchYoutube, getVideoInfo, formatDuration } from "@/lib/youtube-search";
+import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
 
 // Cache for storing search results to avoid repeating searches
 const searchCache: Record<string, {
@@ -35,8 +36,8 @@ async function enhanceSearchQuery(recipeName: string): Promise<string> {
   }
 }
 
-// Search YouTube using ytdl-core
-async function searchYouTubeWithDetails(query: string): Promise<{ 
+// Search YouTube using ytdl-core with improved error handling
+async function searchYouTubeWithDetails(query: string, cuisine?: string): Promise<{ 
   id: string, 
   title: string, 
   channelName: string, 
@@ -97,7 +98,7 @@ async function searchYouTubeWithDetails(query: string): Promise<{
     try {
       const videoInfo = await getVideoInfo(bestMatch.id);
       
-      if (videoInfo) {
+      if (videoInfo && videoInfo.videoDetails) {
         const result = {
           id: bestMatch.id,
           title: videoInfo.videoDetails.title || bestMatch.title,
@@ -118,8 +119,8 @@ async function searchYouTubeWithDetails(query: string): Promise<{
         
         return result;
       }
-    } catch (error) {
-      console.error("Error getting detailed video info:", error);
+    } catch (ytdlError) {
+      console.error("Error getting detailed video info:", ytdlError);
     }
     
     // If ytdl-core fails, use the basic search result
@@ -142,7 +143,8 @@ async function searchYouTubeWithDetails(query: string): Promise<{
     return fallbackResult;
   } catch (error) {
     console.error("Error searching YouTube:", error);
-    return RELIABLE_VIDEOS[Math.floor(Math.random() * RELIABLE_VIDEOS.length)];
+    // Get a fallback video taking into account the cuisine if possible
+    return getReliableFallbackVideo(cuisine, query);
   }
 }
 
@@ -195,6 +197,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
+    const cuisine = searchParams.get('cuisine') || undefined;
     
     if (!query) {
       return NextResponse.json({ 
@@ -207,14 +210,14 @@ export async function GET(request: Request) {
     const enhancedQuery = await enhanceSearchQuery(query);
     
     // Then, search YouTube with the enhanced query
-    const video = await searchYouTubeWithDetails(enhancedQuery);
+    const video = await searchYouTubeWithDetails(enhancedQuery, cuisine);
     
     if (video) {
       return NextResponse.json({ video });
     }
     
     // If search fails, return a reliable fallback video
-    const fallbackVideo = RELIABLE_VIDEOS[Math.floor(Math.random() * RELIABLE_VIDEOS.length)];
+    const fallbackVideo = getReliableFallbackVideo(cuisine, query);
     return NextResponse.json({ video: fallbackVideo });
   } catch (error) {
     console.error("YouTube search API error:", error);
