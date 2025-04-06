@@ -94,3 +94,28 @@ export function scoreYouTubeVideo(
   
   return score;
 }
+
+/**
+ * Validate a YouTube video ID without using ytdl-core
+ * Uses a HEAD request to check if the video exists
+ */
+export async function validateYouTubeVideoId(videoId: string): Promise<boolean> {
+  if (!videoId || !videoId.match(/^[a-zA-Z0-9_-]{11}$/)) {
+    return false;
+  }
+  
+  try {
+    // Try a HEAD request to the oEmbed endpoint
+    // This is lightweight and doesn't require auth
+    const response = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { method: 'HEAD' }
+    );
+    
+    // If we get a 200 status, the video exists and is public
+    return response.status === 200;
+  } catch (error) {
+    console.error(`Error validating YouTube video ${videoId}:`, error);
+    return false;
+  }
+}

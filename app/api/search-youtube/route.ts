@@ -4,7 +4,8 @@ import { object, z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
 import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
-import { searchYoutube, getVideoInfo, formatDuration } from "@/lib/youtube-search";
+import { searchYoutube, searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
+import { hasBasicYouTubeAuth } from "@/lib/youtube-config";
 
 // Cache for storing search results to avoid repeating searches
 const searchCache: Record<string, {
@@ -36,7 +37,7 @@ async function enhanceSearchQuery(recipeName: string): Promise<string> {
   }
 }
 
-// Search YouTube using ytdl-core with improved error handling
+// Search YouTube with improved error handling and direct API support
 async function searchYouTubeWithDetails(query: string, cuisine?: string): Promise<{ 
   id: string, 
   title: string, 
@@ -54,11 +55,20 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
       return searchCache[cacheKey].results;
     }
 
-    // Use youtube-search-api for the initial search
-    const searchResults = await searchYoutube(query);
+    // First try the direct API method if we have basic authentication
+    let searchResults = [];
+    if (hasBasicYouTubeAuth()) {
+      searchResults = await searchYoutubeDirectAPI(query);
+    }
+    
+    // Fall back to youtube-search-api if direct API returned no results
+    if (!searchResults || searchResults.length === 0) {
+      console.log("Direct API search failed or returned no results, trying youtube-search-api");
+      searchResults = await searchYoutube(query);
+    }
     
     if (!searchResults || searchResults.length === 0) {
-      console.error("No search results found");
+      console.error("No search results found from any source");
       return RELIABLE_VIDEOS[Math.floor(Math.random() * RELIABLE_VIDEOS.length)];
     }
     

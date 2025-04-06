@@ -165,6 +165,35 @@ function YouTubeVideo({ videoId, title, channelName, duration, views }: {
   const [iframeLoading, setIframeLoading] = useState<boolean>(true);
   
   useEffect(() => {
+    // Validate the video ID using our API
+    const validateVideo = async () => {
+      try {
+        const response = await fetch(`/api/validate-youtube?videoId=${videoId}`);
+        const data = await response.json();
+        
+        if (!data.valid && data.fallbackId) {
+          console.log(`Video ID ${videoId} is invalid, using fallback: ${data.fallbackId}`);
+          setIsValid(false);
+          setFallbackId(data.fallbackId);
+        } else {
+          setIsValid(true);
+        }
+      } catch (error) {
+        console.error("Error validating YouTube video:", error);
+        // If validation fails, assume the video is valid and let the iframe handle any errors
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Only validate if we have a videoId
+    if (videoId) {
+      setIsLoading(true);
+      validateVideo();
+    }
+  }, [videoId]);
+  
+  useEffect(() => {
     setIframeLoading(true);
     
     // Set a timeout to stop showing loading indicator after a reasonable time
