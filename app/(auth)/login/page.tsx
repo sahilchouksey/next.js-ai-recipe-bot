@@ -28,7 +28,9 @@ export default function Page() {
     } else if (state.status === "invalid_data") {
       toast.error("Failed validating your submission!");
     } else if (state.status === "success") {
-      router.refresh();
+      toast.success("Login successful!");
+      // Redirect to the new chat page instead of just refreshing
+      router.push("/");
     }
   }, [state.status, router]);
 
