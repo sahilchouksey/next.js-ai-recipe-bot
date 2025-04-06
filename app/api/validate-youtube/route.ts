@@ -1,6 +1,7 @@
+
 import { NextResponse } from "next/server";
 
-import { getVideoInfo } from "@/lib/youtube-search";
+import { getYouTubeRequestHeaders } from "@/lib/youtube-config";
 
 // YouTube valid video IDs we know work
 const KNOWN_VALID_VIDEOS = [
@@ -33,15 +34,21 @@ export async function GET(request: Request) {
       });
     }
     
-    // Try to validate with ytdl-core using our updated function with cookie support
+    // Try to validate with oEmbed API endpoint (lighter than ytdl-core)
     try {
-      const videoInfo = await getVideoInfo(videoId);
+      const response = await fetch(
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+        { 
+          headers: getYouTubeRequestHeaders(),
+          method: 'HEAD' // Only need headers, not the full response
+        }
+      );
       
-      if (videoInfo && videoInfo.videoDetails) {
+      if (response.ok) {
         return NextResponse.json({ valid: true });
       }
-    } catch (ytdlError) {
-      console.error("ytdl-core validation failed:", ytdlError);
+    } catch (apiError) {
+      console.error("YouTube validation API error:", apiError);
       // Continue to fallback
     }
     

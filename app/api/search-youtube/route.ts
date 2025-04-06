@@ -1,11 +1,11 @@
 import { generateObject } from "ai";
 import { NextResponse } from "next/server";
-import { object, z } from "zod";
+import { z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
 import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
-import { searchYoutube, searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 import { hasBasicYouTubeAuth } from "@/lib/youtube-config";
+import { searchYoutube, searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 
 // Cache for storing search results to avoid repeating searches
 const searchCache: Record<string, {
@@ -104,36 +104,32 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
       return RELIABLE_VIDEOS[Math.floor(Math.random() * RELIABLE_VIDEOS.length)];
     }
     
-    // Get more details with ytdl-core if available
-    try {
-      const videoInfo = await getVideoInfo(bestMatch.id);
+    // Get more details for the video
+    const videoInfo = await getVideoInfo(bestMatch.id);
+    
+    if (videoInfo && videoInfo.videoDetails) {
+      const result = {
+        id: bestMatch.id,
+        title: videoInfo.videoDetails.title || bestMatch.title,
+        channelName: videoInfo.videoDetails.author?.name || bestMatch.channelTitle || "Unknown Channel",
+        thumbnailUrl: videoInfo.videoDetails.thumbnails?.[0]?.url || 
+                    `https://i.ytimg.com/vi/${bestMatch.id}/hqdefault.jpg`,
+        duration: videoInfo.videoDetails.lengthSeconds ? 
+                formatDuration(parseInt(videoInfo.videoDetails.lengthSeconds)) : 
+                bestMatch.length?.text || "Unknown",
+        views: parseInt(videoInfo.videoDetails.viewCount || '0')
+      };
       
-      if (videoInfo && videoInfo.videoDetails) {
-        const result = {
-          id: bestMatch.id,
-          title: videoInfo.videoDetails.title || bestMatch.title,
-          channelName: videoInfo.videoDetails.author?.name || "Unknown Channel",
-          thumbnailUrl: videoInfo.videoDetails.thumbnails[0]?.url || 
-                      `https://i.ytimg.com/vi/${bestMatch.id}/hqdefault.jpg`,
-          duration: videoInfo.videoDetails.lengthSeconds ? 
-                  formatDuration(parseInt(videoInfo.videoDetails.lengthSeconds)) : 
-                  "Unknown",
-          views: parseInt(videoInfo.videoDetails.viewCount || '0')
-        };
-        
-        // Cache the results
-        searchCache[cacheKey] = {
-          timestamp: Date.now(),
-          results: result
-        };
-        
-        return result;
-      }
-    } catch (ytdlError) {
-      console.error("Error getting detailed video info:", ytdlError);
+      // Cache the results
+      searchCache[cacheKey] = {
+        timestamp: Date.now(),
+        results: result
+      };
+      
+      return result;
     }
     
-    // If ytdl-core fails, use the basic search result
+    // If detailed info is unavailable, use the basic search result
     const fallbackResult = {
       id: bestMatch.id,
       title: bestMatch.title || `How to Make ${query}`,
@@ -160,7 +156,6 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
 
 // Updated RELIABLE_VIDEOS with cuisine-specific options
 const RELIABLE_VIDEOS = [
-  // Indian cuisine videos
   {
     id: "4qKgYCm9Nv4",
     title: "Restaurant Style Chicken Tikka Masala",

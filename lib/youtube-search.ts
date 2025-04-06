@@ -1,5 +1,6 @@
+
 import youtubeSearchApi from 'youtube-search-api';
-import ytdl from 'ytdl-core';
+
 import { YOUTUBE_COOKIE, getYouTubeRequestHeaders } from './youtube-config';
 
 // Cache for storing video info to reduce API calls
@@ -10,9 +11,6 @@ const videoInfoCache: Record<string, {
 
 // Cache expiration time (1 hour)
 const CACHE_DURATION = 60 * 60 * 1000;
-
-// Get YouTube cookie from environment variable
-// const YOUTUBE_COOKIE = process.env.YOUTUBE_COOKIE || '';
 
 /**
  * Search for YouTube videos using youtube-search-api
@@ -154,8 +152,8 @@ function extractVideoResults(data: any): Array<any> {
           channelTitle,
           channelId,
           length,
-          // @ts-ignore
-          isLive: !!videoRenderer.badges?.find(badge => badge?.metadataBadgeRenderer?.style === "BADGE_STYLE_TYPE_LIVE_NOW"),
+          isLive: !!videoRenderer.badges?.find((badge: any) => 
+            badge?.metadataBadgeRenderer?.style === "BADGE_STYLE_TYPE_LIVE_NOW"),
           viewCount
         });
       }
@@ -187,7 +185,7 @@ function lengthTextToSeconds(lengthText: string): number {
 }
 
 /**
- * Get detailed info about a YouTube video using ytdl-core with cookie support
+ * Get detailed info about a YouTube video using direct API calls instead of ytdl-core
  */
 export async function getVideoInfo(videoId: string): Promise<any> {
   // Check cache first
@@ -197,35 +195,90 @@ export async function getVideoInfo(videoId: string): Promise<any> {
   }
   
   try {
-    // Set up request options with cookie for authentication
-    const requestOptions: ytdl.getInfoOptions = {
-      requestOptions: {
-        headers: {
-          // Add the cookie for authentication
-          'Cookie': YOUTUBE_COOKIE
-        }
+    // First try oEmbed endpoint which is lightweight
+    const embedResponse = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { 
+        headers: getYouTubeRequestHeaders(),
+        next: { revalidate: 3600 } // Cache for 1 hour
       }
+    );
+    
+    if (embedResponse.ok) {
+      const embedData = await embedResponse.json();
+      
+      // Create a response similar to ytdl-core format for compatibility
+      const videoDetails = {
+        videoId,
+        title: embedData.title,
+        author: {
+          name: embedData.author_name,
+          channel_url: embedData.author_url
+        },
+        thumbnails: [
+          { url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }
+        ],
+        lengthSeconds: "0", // Not available from oembed
+        viewCount: "0" // Not available from oembed
+      };
+      
+      const result = { videoDetails };
+      
+      // Cache the result
+      videoInfoCache[videoId] = {
+        data: result,
+        timestamp: Date.now()
+      };
+      
+      return result;
+    }
+    
+    // If oembed fails, try a more direct method with YouTube API
+    const url = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
+    
+    const payload = {
+      context: {
+        client: {
+          hl: "en",
+          gl: "US",
+          clientName: "WEB",
+          clientVersion: "2.20250403.01.00"
+        }
+      },
+      videoId: videoId
     };
-
-    // Set a timeout to prevent hanging requests
-    const timeout = 8000; // 8 seconds
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), timeout);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getYouTubeRequestHeaders(),
+      body: JSON.stringify(payload)
     });
     
-    // Create the ytdl info request with our options
-    const infoPromise = ytdl.getBasicInfo(videoId, requestOptions);
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Parse relevant video details from response
+      if (data && data.videoDetails) {
+        // Cache the result
+        videoInfoCache[videoId] = {
+          data: { videoDetails: data.videoDetails },
+          timestamp: Date.now()
+        };
+        
+        return { videoDetails: data.videoDetails };
+      }
+    }
     
-    // Race between the actual request and the timeout
-    const info = await Promise.race([infoPromise, timeoutPromise]) as ytdl.videoInfo;
-    
-    // Cache the result
-    videoInfoCache[videoId] = {
-      data: info,
-      timestamp: Date.now()
+    // If all else fails, return a minimal response with the ID and a default thumbnail
+    const fallbackResult = {
+      videoDetails: {
+        videoId,
+        title: "YouTube Video",
+        thumbnails: [{ url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }]
+      }
     };
     
-    return info;
+    return fallbackResult;
   } catch (error) {
     console.error(`Error getting video info for ${videoId}:`, error);
     // Return null to signal that a fallback should be used
