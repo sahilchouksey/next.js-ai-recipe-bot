@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Play } from "lucide-react";
+import Image from "next/image";
 
 const SAMPLE = {
   title: "How to Make Classic Spaghetti Carbonara",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getIngredientImageFromSpoonacular } from "@/lib/spoonacular-api";
+
 import { INGREDIENT_IMAGES, CATEGORY_FALLBACKS, GENERIC_FOOD_FALLBACK } from "@/lib/ingredient-database";
+import { getIngredientImageFromSpoonacular } from "@/lib/spoonacular-api";
 
 // Caching ingredient image responses to improve performance
 const imageCache: Record<string, { url: string, timestamp: number }> = {};

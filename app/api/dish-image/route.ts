@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { getRecipeImageFromSpoonacular } from "@/lib/spoonacular-api";
 
 // Caching dish images to improve performance

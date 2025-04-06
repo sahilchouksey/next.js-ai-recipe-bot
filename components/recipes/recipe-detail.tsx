@@ -1,6 +1,7 @@
 import { Clock, ChefHat, Users, Utensils, Image as ImageIcon, AlertCircle } from "lucide-react";
 import NextImage from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Known working YouTube IDs for fallback

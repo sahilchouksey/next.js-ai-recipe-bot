@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import { geminiFlashModel } from "@/ai";
 import { generateObject } from "ai";
-import { z } from "zod";
+import { NextResponse } from "next/server";
+import { object, z } from "zod";
+
+import { geminiFlashModel } from "@/ai";
 import { searchYoutube, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 
 // Cache for storing search results to avoid repeating searches

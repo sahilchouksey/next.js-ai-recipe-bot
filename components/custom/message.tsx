@@ -8,8 +8,8 @@ import { BotIcon, UserIcon } from "./icons";
 import { Markdown } from "./markdown";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
-import { RecipeList } from "../recipes/recipe-list";
 import { RecipeDetail } from "../recipes/recipe-detail";
+import { RecipeList } from "../recipes/recipe-list";
 
 export const Message = ({
   chatId,
@@ -69,7 +69,7 @@ export const Message = ({
         {/* Display brief intro message when hiding duplicate content */}
         {hideContent && (
           <div className="text-zinc-800 dark:text-zinc-300 text-sm italic">
-            Here's the recipe you requested:
+            Here&apos;s the recipe you requested:
           </div>
         )}
 

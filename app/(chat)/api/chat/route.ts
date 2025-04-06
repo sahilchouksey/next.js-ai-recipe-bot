@@ -1,6 +1,6 @@
 import { convertToCoreMessages, Message, streamText } from "ai";
-import { z } from "zod";
 import { v4 as uuidv4 } from 'uuid';
+import { z } from "zod";
 
 import { geminiProModel } from "@/ai";
 import {
@@ -17,7 +17,6 @@ import {
   getRecipeById,
   saveChat,
 } from "@/db/queries";
-import { generateUUID } from "@/lib/utils";
 import { getCachedRecipe, cacheRecipe } from "@/lib/recipe-cache";
 
 const VALID_YOUTUBE_IDS = ["dQw4w9WgXcQ", "eYq7WapuDLU", "3JZ_D3ELwOQ"]; // Example valid YouTube IDs

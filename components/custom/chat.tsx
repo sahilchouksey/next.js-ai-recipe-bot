@@ -1,7 +1,7 @@
 "use client";
-
 import { Attachment, Message } from "ai";
 import { useChat } from "ai/react";
+import { ArrowDownIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Message as PreviewMessage } from "@/components/custom/message";
@@ -9,7 +9,6 @@ import { useScrollToBottom } from "@/components/custom/use-scroll-to-bottom";
 
 import { MultimodalInput } from "./multimodal-input";
 import { Overview } from "./overview";
-import { ArrowDownIcon } from "lucide-react";
 
 export function Chat({
   id,
