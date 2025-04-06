@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/custom/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://next-js-ai-recipe-bot.vercel.app2"),
+  metadataBase: new URL("https://ai-recipe-chatbot.vercel.app"),
   title: "AI Recipe Chatbot",
   description: "AI Recipe Chatbot – discover, share, and explore delicious recipes using cutting‑edge AI",
 };

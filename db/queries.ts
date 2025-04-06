@@ -1,11 +1,11 @@
 import "server-only";
 
 import { genSaltSync, hashSync } from "bcrypt-ts";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { user, chat, User, reservation } from "./schema";
+import { user, chat, User, reservation, recipe } from "./schema";
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -146,4 +146,84 @@ export async function updateReservation({
       hasCompletedPayment,
     })
     .where(eq(reservation.id, id));
+}
+
+export async function saveRecipe({
+  id,
+  userId,
+  details,
+}: {
+  id: string;
+  userId: string;
+  details: any;
+}) {
+  try {
+    // Check if recipe with this ID already exists
+    const existingRecipe = await db
+      .select({ count: sql`count(*)` })
+      .from(recipe)
+      .where(eq(recipe.id, id));
+      
+    const count = parseInt(existingRecipe[0]?.count as string || "0");
+    
+    if (count > 0) {
+      console.log(`Recipe with ID ${id} already exists, using update instead of insert`);
+      return await db
+        .update(recipe)
+        .set({
+          details: JSON.stringify(details),
+        })
+        .where(eq(recipe.id, id));
+    }
+    
+    // If no existing recipe, insert a new one
+    return await db.insert(recipe).values({
+      id,
+      createdAt: new Date(),
+      userId,
+      details: JSON.stringify(details),
+      isFavorite: false,
+    });
+  } catch (error) {
+    console.error("Failed to save recipe:", error);
+    // Return null instead of throwing to prevent the application from crashing
+    return null;
+  }
+}
+
+export async function getRecipeById({ id }: { id: string }) {
+  const [selectedRecipe] = await db
+    .select()
+    .from(recipe)
+    .where(eq(recipe.id, id));
+
+  return selectedRecipe;
+}
+
+export async function getRecipesByUserId({ id }: { id: string }) {
+  try {
+    return await db
+      .select()
+      .from(recipe)
+      .where(eq(recipe.userId, id))
+      .orderBy(desc(recipe.createdAt));
+  } catch (error) {
+    console.error("Failed to get recipes by user from database");
+    throw error;
+  }
+}
+
+export async function toggleFavoriteRecipe({
+  id,
+  isFavorite,
+}: {
+  id: string;
+  isFavorite: boolean;
+}) {
+  return await db
+    .update(recipe)
+    .set({
+      isFavorite,
+    })
+    .where(eq(recipe.id, id));
 }

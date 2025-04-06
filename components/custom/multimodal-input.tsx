@@ -19,16 +19,36 @@ import useWindowSize from "./use-window-size";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
-const suggestedActions = [
+const SUGGESTED_INPUTS = [
   {
-    title: "Help me book a flight",
-    label: "from San Francisco to London",
-    action: "Help me book a flight from San Francisco to London",
+    key: "find-recipe",
+    title: "Find a recipe",
+    label: "for chicken parmesan",
+    action: "Find recipes for chicken parmesan",
   },
   {
-    title: "What is the status",
-    label: "of flight BA142 flying tmrw?",
-    action: "What is the status of flight BA142 flying tmrw?",
+    key: "cuisine",
+    title: "Recipe by cuisine",
+    label: "show me Indian vegetarian dishes",
+    action: "Show me some Indian vegetarian recipes",
+  },
+  {
+    key: "quick",
+    title: "Quick meal",
+    label: "I need dinner ideas ready in 30 minutes",
+    action: "I need dinner recipes that can be made in 30 minutes or less",
+  },
+  {
+    key: "dietary",
+    title: "Dietary restriction",
+    label: "Find gluten-free desserts",
+    action: "Find gluten-free dessert recipes",
+  },
+  {
+    key: "ingredient-based",
+    title: "Use what I have",
+    label: "I have pasta, tomatoes, and basil",
+    action: "What can I make with pasta, tomatoes, and basil?",
   },
 ];
 
@@ -157,27 +177,27 @@ export function MultimodalInput({
         attachments.length === 0 &&
         uploadQueue.length === 0 && (
           <div className="grid sm:grid-cols-2 gap-4 w-full md:px-0 mx-auto md:max-w-[500px]">
-            {suggestedActions.map((suggestedAction, index) => (
+            {SUGGESTED_INPUTS.map((suggestedInput, index) => (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ delay: 0.05 * index }}
-                key={index}
+                key={suggestedInput.key}
                 className={index > 1 ? "hidden sm:block" : "block"}
               >
                 <button
                   onClick={async () => {
                     append({
                       role: "user",
-                      content: suggestedAction.action,
+                      content: suggestedInput.action,
                     });
                   }}
                   className="border-none bg-muted/50 w-full text-left border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg p-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex flex-col"
                 >
-                  <span className="font-medium">{suggestedAction.title}</span>
+                  <span className="font-medium">{suggestedInput.title}</span>
                   <span className="text-zinc-500 dark:text-zinc-400">
-                    {suggestedAction.label}
+                    {suggestedInput.label}
                   </span>
                 </button>
               </motion.div>
