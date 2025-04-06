@@ -262,7 +262,7 @@ function YouTubeVideo({ videoId, title, channelName, duration, views }: {
           <p className="text-xs text-muted-foreground">{displayChannelName}</p>
           {duration && <span className="text-xs text-muted-foreground">{duration}</span>}
         </div>
-        {views !== undefined && (
+        {views !== undefined && views !== 0 && (
           <p className="text-xs text-muted-foreground mt-1">
             {new Intl.NumberFormat().format(views)} views
           </p>

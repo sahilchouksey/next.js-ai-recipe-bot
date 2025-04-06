@@ -1,6 +1,3 @@
-
-import youtubeSearchApi from 'youtube-search-api';
-
 import { YOUTUBE_COOKIE, getYouTubeRequestHeaders } from './youtube-config';
 
 // Cache for storing video info to reduce API calls
@@ -13,28 +10,7 @@ const videoInfoCache: Record<string, {
 const CACHE_DURATION = 60 * 60 * 1000;
 
 /**
- * Search for YouTube videos using youtube-search-api
- */
-export async function searchYoutube(query: string): Promise<Array<any>> {
-  try {
-    console.log(`Searching YouTube for: "${query}"`);
-    const result = await youtubeSearchApi.GetListByKeyword(query, false, 10, [
-      { type: 'video' }
-    ]);
-    
-    if (result && result.items && result.items.length > 0) {
-      return result.items;
-    }
-    return [];
-  } catch (error) {
-    console.error('Error searching YouTube:', error);
-    return [];
-  }
-}
-
-/**
  * Search for YouTube videos using YouTube's internal API directly
- * This is more reliable than third-party packages in deployed environments
  */
 export async function searchYoutubeDirectAPI(query: string): Promise<Array<any>> {
   try {
@@ -143,7 +119,7 @@ function extractVideoResults(data: any): Array<any> {
           }
         }
         
-        // Format result similar to youtube-search-api output for compatibility
+        // Format result
         results.push({
           id: videoId,
           title,
@@ -185,7 +161,7 @@ function lengthTextToSeconds(lengthText: string): number {
 }
 
 /**
- * Get detailed info about a YouTube video using direct API calls instead of ytdl-core
+ * Get detailed info about a YouTube video using direct API calls
  */
 export async function getVideoInfo(videoId: string): Promise<any> {
   // Check cache first
@@ -207,7 +183,7 @@ export async function getVideoInfo(videoId: string): Promise<any> {
     if (embedResponse.ok) {
       const embedData = await embedResponse.json();
       
-      // Create a response similar to ytdl-core format for compatibility
+      // Create a response with basic video details
       const videoDetails = {
         videoId,
         title: embedData.title,
@@ -320,3 +296,6 @@ export function parseDuration(isoDuration: string): number {
     parseInt(seconds || '0')
   );
 }
+
+// Expose the direct API function under the original name for backward compatibility
+export const searchYoutube = searchYoutubeDirectAPI;

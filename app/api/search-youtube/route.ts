@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
 import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
+import { searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 import { hasBasicYouTubeAuth } from "@/lib/youtube-config";
-import { searchYoutube, searchYoutubeDirectAPI, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 
 // Cache for storing search results to avoid repeating searches
 const searchCache: Record<string, {
@@ -37,7 +37,7 @@ async function enhanceSearchQuery(recipeName: string): Promise<string> {
   }
 }
 
-// Search YouTube with improved error handling and direct API support
+// Search YouTube with direct API implementation
 async function searchYouTubeWithDetails(query: string, cuisine?: string): Promise<{ 
   id: string, 
   title: string, 
@@ -55,21 +55,17 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
       return searchCache[cacheKey].results;
     }
 
-    // First try the direct API method if we have basic authentication
+    // Use only the direct API method
     let searchResults = [];
     if (hasBasicYouTubeAuth()) {
       searchResults = await searchYoutubeDirectAPI(query);
-    }
-    
-    // Fall back to youtube-search-api if direct API returned no results
-    if (!searchResults || searchResults.length === 0) {
-      console.log("Direct API search failed or returned no results, trying youtube-search-api");
-      searchResults = await searchYoutube(query);
+    } else {
+      console.error("YouTube authentication not configured");
     }
     
     if (!searchResults || searchResults.length === 0) {
-      console.error("No search results found from any source");
-      return RELIABLE_VIDEOS[Math.floor(Math.random() * RELIABLE_VIDEOS.length)];
+      console.error("No search results found from direct API");
+      return getReliableFallbackVideo(cuisine, query);
     }
     
     // Score search results to find the most relevant video
@@ -94,14 +90,15 @@ async function searchYouTubeWithDetails(query: string, cuisine?: string): Promis
       return { item, score };
     });
     
-    // Sort by score
+    // Sort by score to get best match
     scoredResults.sort((a:any, b:any) => b.score - a.score);
     
     // Get the best match
     const bestMatch = scoredResults[0]?.item;
     
     if (!bestMatch || !bestMatch.id) {
-      return RELIABLE_VIDEOS[Math.floor(Math.random() * RELIABLE_VIDEOS.length)];
+      console.error("No valid match found after scoring");
+      return getReliableFallbackVideo(cuisine, query);
     }
     
     // Get more details for the video
