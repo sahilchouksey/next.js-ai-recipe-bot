@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { object, z } from "zod";
 
 import { geminiFlashModel } from "@/ai";
-import { searchYoutube, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 import { getReliableFallbackVideo } from "@/lib/video-fallbacks";
+import { searchYoutube, getVideoInfo, formatDuration } from "@/lib/youtube-search";
 
 // Cache for storing search results to avoid repeating searches
 const searchCache: Record<string, {
